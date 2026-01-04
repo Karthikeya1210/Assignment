@@ -1,0 +1,56 @@
+name: Test Notebook Execution
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test-notebook:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Execute notebook
+      run: |
+        jupyter nbconvert --to notebook --execute --inplace PA7081_2025_Final_Assignment.ipynb
+        
+    - name: Check for errors
+      run: |
+        python3 -c "
+        import json
+        import sys
+        
+        with open('PA7081_2025_Final_Assignment.ipynb', 'r') as f:
+            nb = json.load(f)
+        
+        errors = []
+        for i, cell in enumerate(nb['cells']):
+            if cell['cell_type'] == 'code':
+                for output in cell.get('outputs', []):
+                    if output.get('output_type') == 'error':
+                        errors.append(f\"Cell {i}: {output.get('ename', 'Unknown')}: {output.get('evalue', 'Unknown error')}\")
+        
+        if errors:
+            print('Errors found in notebook:')
+            for error in errors:
+                print(f'  - {error}')
+            sys.exit(1)
+        else:
+            print('Notebook executed successfully with no errors!')
+        "
+
